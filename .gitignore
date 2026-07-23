@@ -1,0 +1,20 @@
+# Local secrets
+.env
+.env.*
+api_key.txt
+secrets.txt
+Credentials/
+credentials/
+
+# Excel workbooks / temporary files
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+~$*
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
