@@ -5,6 +5,10 @@ api_key.txt
 secrets.txt
 Credentials/
 credentials/
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Excel workbooks / temporary files
 *.xls
