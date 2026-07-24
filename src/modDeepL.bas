@@ -4,7 +4,9 @@ Option Explicit
 '========================
 ' ユーザー設定
 '========================
-Private Const DEEPL_AUTH_KEY As String = "ここにDeepLのAPIキー"
+' 推奨: Windows の環境変数 DEEPL_AUTH_KEY にAPIキーを設定します。
+' 互換性のためコード内フォールバックも利用できますが、公開リポジトリでは空欄のままにしてください。
+Private Const DEEPL_AUTH_KEY_FALLBACK As String = ""
 Private Const DEEPL_ENDPOINT As String = "https://api-free.deepl.com/v2/translate"
 ' Pro版ならこっち
 ' Private Const DEEPL_ENDPOINT As String = "https://api.deepl.com/v2/translate"
@@ -17,6 +19,18 @@ Private Const TARGET_SHEET_NAME As String = ""
 Private Const TRIGGER_CELL As String = "A2"
 Private Const SOURCE_CELL As String = "B2"
 Private Const OUTPUT_CELL As String = "C2"
+
+'========================
+' 認証キー取得
+'========================
+Private Function GetDeepLAuthKey() As String
+    Dim key As String
+
+    key = Trim$(Environ$("DEEPL_AUTH_KEY"))
+    If key = "" Then key = Trim$(DEEPL_AUTH_KEY_FALLBACK)
+
+    GetDeepLAuthKey = key
+End Function
 
 '========================
 ' 対象シート判定
@@ -91,14 +105,22 @@ Private Function GetKanaFromDeepL(ByVal personName As String) As String
     Dim body As String
     Dim responseText As String
     Dim resultText As String
+    Dim authKey As String
 
     On Error GoTo EH
+
+    authKey = GetDeepLAuthKey()
+    If authKey = "" Then
+        Debug.Print "DeepL API key is not configured. Set the DEEPL_AUTH_KEY environment variable."
+        GetKanaFromDeepL = ""
+        Exit Function
+    End If
 
     Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
     body = BuildTranslateRequestBody(personName)
 
     http.Open "POST", DEEPL_ENDPOINT, False
-    http.SetRequestHeader "Authorization", "DeepL-Auth-Key " & DEEPL_AUTH_KEY
+    http.SetRequestHeader "Authorization", "DeepL-Auth-Key " & authKey
     http.SetRequestHeader "Content-Type", "application/json; charset=utf-8"
     http.SetTimeouts 10000, 10000, 15000, 15000
     http.Send body
@@ -136,8 +158,8 @@ Private Function BuildTranslateRequestBody(ByVal personName As String) As String
     escapedName = JsonEscape(personName)
 
     escapedContext = JsonEscape( _
-        "This text is a Japanese person's full name used in HR paperwork. " & _
-        "Return the reading in full-width Katakana suitable for furigana entry." _
+        "This text is a Japanese person's full name. " & _
+        "Return the reading in full-width Katakana suitable for a phonetic-name field." _
     )
 
     instruction1 = JsonEscape("Return the person's name reading in full-width Katakana.")
@@ -248,7 +270,7 @@ Private Function JsonUnescape(ByVal s As String) As String
     Dim t As String
 
     t = s
-    t = Replace(t, "\""","""")
+    t = Replace(t, "\""", """")
     t = Replace(t, "\/", "/")
     t = Replace(t, "\\", "\")
     t = Replace(t, "\b", vbBack)
